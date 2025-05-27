@@ -1,0 +1,11 @@
+{
+  "name": "@espeon/eddyapi",
+  "description": "API for Tidal",
+  "author": {
+    "name": "espeon",
+    "url": "https://github.com/espeon",
+    "avatarUrl": "https://avatars.githubusercontent.com/u/22222885"
+  },
+  "main": "./src/index.ts",
+  "type": "module"
+}
