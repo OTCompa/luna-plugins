@@ -67,7 +67,7 @@ export const update = async (info?: UpdateInfo) => {
   }
 
   // Handle time and paused state updates (from polling)
-  if (info.time !== undefined) {
+  if (info.time !== undefined && !currentInfo.paused) {
     currentInfo.position = info.time;
     currentInfo.lastUpdate = Date.now();
   }
