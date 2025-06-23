@@ -3,7 +3,12 @@ import { redux, MediaItem, PlayState, ipcRenderer } from "@luna/lib";
 
 import { intercept } from "plugins/lib/src/redux";
 import { getCurrentReduxTime } from "./time";
-import { startServer, stopServer, updateMediaInfo } from "./serveApi.native";
+import {
+  startServer,
+  stopServer,
+  updateMediaInfo,
+  checkInput,
+} from "./serveApi.native";
 
 export const unloads = new Set<LunaUnload>();
 
@@ -35,6 +40,32 @@ const getMediaURL = (id?: string, path = "/1280x1280.jpg") =>
   id
     ? "https://resources.tidal.com/images/" + id.split("-").join("/") + path
     : null;
+
+const pollForInput = async () => {
+  let input = await checkInput();
+  if (input) {
+    switch (input.playbackControl) {
+      case "Play":
+        PlayState.play();
+        break;
+      case "Pause":
+        PlayState.pause();
+        break;
+      case "Next":
+        PlayState.next();
+        break;
+      case "Previous":
+        PlayState.previous();
+        break;
+    }
+    if (input.shuffle) PlayState.setShuffle(!PlayState.shuffle);
+    if (input.repeat) {
+      let next = PlayState.repeat + 1;
+      if (next > 2) next = 0;
+      PlayState.setRepeat(next);
+    }
+  }
+};
 
 export const update = async (info?: UpdateInfo) => {
   if (!info) {
@@ -76,11 +107,11 @@ export const update = async (info?: UpdateInfo) => {
     currentInfo.paused = info.paused;
   }
 
-  console.log("Current playback state:", currentInfo);
+  //console.log("Current playback state:", currentInfo);
 
   // Ensure we have some minimal info before sending
   if (currentInfo.item || currentInfo.position !== null) {
-    console.log("Sending update");
+    //console.log("Sending update");
     updateMediaInfo(currentInfo);
   } else {
     console.log("Not enough info to send update.");
@@ -105,6 +136,13 @@ export const update = async (info?: UpdateInfo) => {
   printPlayTime();
 })();
 
+const poll = async () => {
+  pollForInput();
+  let t = setTimeout(poll, 200);
+  unloads.add(() => clearTimeout(t));
+};
+poll();
+
 MediaItem.onMediaTransition(unloads, async (mediaItem) => {
   console.log("Media transitioned to " + (await mediaItem.title()));
   update({
@@ -121,7 +159,7 @@ PlayState.onState(unloads, (state) => {
 console.log(MediaItem);
 
 export const onLoad = () => {
-  console.log("Loading EddyAPI on port " + 3665);
+  console.log("Loading PlaybackAPI on port " + 3665);
   console.log("Secure mode " + "disabled.");
   try {
     server = startServer({
@@ -129,7 +167,7 @@ export const onLoad = () => {
       secure: false,
       apiKey: undefined,
     });
-    console.log("EddyAPI started");
+    console.log("PlaybackAPI started");
     unloads.add(() => stopServer());
     unloads.add(() => {
       stopServer();
@@ -145,7 +183,7 @@ export const onLoad = () => {
     };
     initStore();
   } catch (error) {
-    console.error("Failed to start EddyAPI:", error);
+    console.error("Failed to start PlaybackAPI:", error);
   }
 };
 

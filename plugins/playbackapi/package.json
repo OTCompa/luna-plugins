@@ -1,0 +1,11 @@
+{
+  "name": "@OTCompa/playbackapi",
+  "description": "Fork of @espeon/eddyapi. Playback API for Tidal.",
+  "author": {
+    "name": "Frey",
+    "url": "https://github.com/OTCompa",
+    "avatarUrl": "https://avatars.githubusercontent.com/u/41562938"
+  },
+  "main": "./src/index.ts",
+  "type": "module"
+}
