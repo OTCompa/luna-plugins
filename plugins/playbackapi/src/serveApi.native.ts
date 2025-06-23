@@ -1,4 +1,5 @@
 import { createServer, IncomingMessage, ServerResponse } from "http";
+import { URL } from "url";
 console.log("EPIC STYLE");
 
 interface ServerConfig {
@@ -12,6 +13,7 @@ interface ApiInput {
   playbackControl: PlaybackControl;
   shuffle: boolean;
   repeat: boolean;
+  seek: number | null;
 }
 
 enum PlaybackControl {
@@ -22,15 +24,18 @@ enum PlaybackControl {
   Previous = "Previous",
 }
 
-const ApiInputDefault: ApiInput = {
-  playbackControl: PlaybackControl.None,
-  shuffle: false,
-  repeat: false,
-};
+function ApiInputDefault() {
+  return {
+    playbackControl: PlaybackControl.None,
+    shuffle: false,
+    repeat: false,
+    seek: null,
+  };
+}
 
 let server: ReturnType<typeof createServer>;
 let currentMediaInfo: any = {};
-let currentApiInput: ApiInput = ApiInputDefault;
+let currentApiInput: ApiInput = ApiInputDefault();
 
 // Update the media info
 export const updateMediaInfo = (mediaInfo: any) => {
@@ -40,7 +45,7 @@ export const updateMediaInfo = (mediaInfo: any) => {
 
 export async function checkInput() {
   let ret = currentApiInput;
-  currentApiInput = ApiInputDefault;
+  currentApiInput = ApiInputDefault();
   return ret;
 }
 
@@ -94,12 +99,18 @@ const createAPIServer = (config: ServerConfig) => {
       }
 
       if (req.url === "/health") {
+        res.writeHead(404, { "Content-Type": "text/plain" });
+        res.end("Not Found");
+        return;
+      }
+    } else if (req.method === "PUT") {
+      if (req.url === undefined) {
         res.writeHead(200, { "Content-Type": "text/plain" });
         res.end("OK");
         return;
       }
-    } else if (req.method === "PUT") {
-      switch (req.url) {
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      switch (url.pathname) {
         case "/play":
           currentApiInput.playbackControl = PlaybackControl.Play;
           break;
@@ -118,9 +129,18 @@ const createAPIServer = (config: ServerConfig) => {
         case "/repeat":
           currentApiInput.repeat = true;
           break;
+        case "/seek":
+          let reqPosition = url.searchParams.get("position");
+          let time = parseFloat(reqPosition || "");
+          if (!isNaN(time) && time >= 0) {
+            currentApiInput.seek = time;
+          } else {
+            currentApiInput.seek = null;
+          }
+          break;
         default:
           res.writeHead(400, { "Content-Type": "text/plain" });
-          res.end("Invalid request");
+          res.end("Invalid request: " + url.pathname);
           return;
       }
       res.writeHead(200, { "Content-Type": "text/plain" });

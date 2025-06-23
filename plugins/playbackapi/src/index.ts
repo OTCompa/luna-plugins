@@ -64,6 +64,10 @@ const pollForInput = async () => {
       if (next > 2) next = 0;
       PlayState.setRepeat(next);
     }
+    if (input.seek !== null && input.seek >= 0) {
+      PlayState.seek(input.seek);
+      PlayState.play();
+    }
   }
 };
 
