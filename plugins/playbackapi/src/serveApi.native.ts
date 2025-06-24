@@ -63,6 +63,58 @@ export async function checkInput() {
   return ret;
 }
 
+function handleControlRequest(url: URL, res: ServerResponse): boolean {
+  switch (url.pathname) {
+    case "/play":
+      currentApiInput.playbackControl = PlaybackControl.Play;
+      break;
+    case "/pause":
+      currentApiInput.playbackControl = PlaybackControl.Pause;
+      break;
+    case "/next":
+      currentApiInput.playbackControl = PlaybackControl.Next;
+      break;
+    case "/prev":
+      currentApiInput.playbackControl = PlaybackControl.Previous;
+      break;
+    case "/shuffle":
+      let reqShuffle = url.searchParams.get("state");
+      if (reqShuffle)
+        currentApiInput.shuffle = reqShuffle.toLowerCase() === "true";
+      break;
+    case "/repeat":
+      let reqState = url.searchParams.get("state");
+      if (reqState) {
+        currentApiInput.repeat =
+          repeatStateDictionary[reqState.toLowerCase()] ?? null;
+      }
+      break;
+    case "/seek":
+      let reqPosition = url.searchParams.get("position");
+      let time = parseFloat(reqPosition || "");
+      if (!isNaN(time) && time >= 0) {
+        currentApiInput.seek = time;
+      } else {
+        return false;
+      }
+      break;
+    case "/volume":
+      let reqVolume = url.searchParams.get("level");
+      if (reqVolume) {
+        const volume = parseFloat(reqVolume);
+        if (!isNaN(volume) && volume >= 0 && volume <= 100) {
+          currentApiInput.volume = volume;
+        } else {
+          return false;
+        }
+      }
+      break;
+    default:
+      return false;
+  }
+  return true;
+}
+
 const createAPIServer = (config: ServerConfig) => {
   server = createServer((req: IncomingMessage, res: ServerResponse) => {
     // Set CORS headers
@@ -124,60 +176,13 @@ const createAPIServer = (config: ServerConfig) => {
         return;
       }
       const url = new URL(req.url, `http://${req.headers.host}`);
-      switch (url.pathname) {
-        case "/play":
-          currentApiInput.playbackControl = PlaybackControl.Play;
-          break;
-        case "/pause":
-          currentApiInput.playbackControl = PlaybackControl.Pause;
-          break;
-        case "/next":
-          currentApiInput.playbackControl = PlaybackControl.Next;
-          break;
-        case "/prev":
-          currentApiInput.playbackControl = PlaybackControl.Previous;
-          break;
-        case "/shuffle":
-          let reqShuffle = url.searchParams.get("state");
-          if (reqShuffle)
-            currentApiInput.shuffle = reqShuffle.toLowerCase() === "true";
-          break;
-        case "/repeat":
-          let reqState = url.searchParams.get("state");
-          if (reqState) {
-            currentApiInput.repeat =
-              repeatStateDictionary[reqState.toLowerCase()] ?? null;
-          }
-          break;
-        case "/seek":
-          let reqPosition = url.searchParams.get("position");
-          let time = parseFloat(reqPosition || "");
-          if (!isNaN(time) && time >= 0) {
-            currentApiInput.seek = time;
-          } else {
-            res.writeHead(400, { "Content-Type": "text/plain" });
-            res.end("Invalid volume level");
-            return;
-          }
-          break;
-        case "/volume":
-          let reqVolume = url.searchParams.get("level");
-          if (reqVolume) {
-            const volume = parseFloat(reqVolume);
-            if (!isNaN(volume) && volume >= 0 && volume <= 100) {
-              currentApiInput.volume = volume;
-            } else {
-              res.writeHead(400, { "Content-Type": "text/plain" });
-              res.end("Invalid volume level");
-              return;
-            }
-          }
-          break;
-        default:
-          res.writeHead(400, { "Content-Type": "text/plain" });
-          res.end("Invalid request: " + url.pathname);
-          return;
+      const handled = handleControlRequest(url, res);
+      if (!handled) {
+        res.writeHead(400, { "Content-Type": "text/plain" });
+        res.end("Bad Request");
+        return;
       }
+
       res.writeHead(200, { "Content-Type": "text/plain" });
       res.end("OK");
       return;
