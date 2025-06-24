@@ -102,7 +102,7 @@ export const update = async (info?: UpdateInfo) => {
   }
 
   // Handle time and paused state updates (from polling)
-  if (info.time !== undefined && !currentInfo.paused) {
+  if (info.time !== undefined) {
     currentInfo.position = info.time;
     currentInfo.lastUpdate = Date.now();
   }
@@ -127,10 +127,11 @@ export const update = async (info?: UpdateInfo) => {
   console.log(redux);
   const printPlayTime = async () => {
     let info = {
-      time: PlayState.paused
-        ? redux.store.getState().playbackControls.latestCurrentTime
-        : getCurrentReduxTime(),
-      paused: PlayState.paused,
+      time:
+        PlayState.state === "NOT_PLAYING"
+          ? redux.store.getState().playbackControls.latestCurrentTime
+          : getCurrentReduxTime(),
+      paused: PlayState.state === "NOT_PLAYING",
     };
     update(info);
     // wait for 1 second
