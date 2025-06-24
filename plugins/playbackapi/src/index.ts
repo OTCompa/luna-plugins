@@ -21,8 +21,9 @@ interface MediaInfo {
   /// is the player paused
   paused: boolean;
   lastUpdate: number;
-  shuffle: boolean;
-  repeat: number;
+  shuffle?: boolean;
+  repeat?: number;
+  volume?: number;
 }
 
 interface UpdateInfo {
@@ -76,17 +77,22 @@ export const update = async (info?: UpdateInfo) => {
       artistArt: null,
       paused: false,
       lastUpdate: Date.now(),
-      shuffle: PlayState.shuffle,
-      repeat: PlayState.repeatMode,
+      shuffle: undefined,
+      repeat: undefined,
+      volume: undefined,
     };
   }
+
+  currentInfo.shuffle = PlayState.shuffle;
+  currentInfo.repeat = PlayState.repeatMode;
+  currentInfo.volume = redux.store.getState().playbackControls.volume;
 
   // changing tracks
   if (info.track) {
     currentInfo.item = info.track.tidalItem;
     console.log("Track changed:", currentInfo.item);
     const track = currentInfo.item;
-    currentInfo.albumArt = await info.track.coverUrl();
+    currentInfo.albumArt = (await info.track.coverUrl()) ?? null;
     currentInfo.artistArt =
       track.artist && track.artist.picture
         ? getMediaURL(track.artist.picture, "/320x320.jpg")
