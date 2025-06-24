@@ -66,6 +66,7 @@ export const update = async (info?: UpdateInfo) => {
     return;
   }
 
+  // initialize info
   if (!currentInfo) {
     currentInfo = {
       item: null,
@@ -80,6 +81,7 @@ export const update = async (info?: UpdateInfo) => {
     };
   }
 
+  // changing tracks
   if (info.track) {
     currentInfo.item = info.track.tidalItem;
     console.log("Track changed:", currentInfo.item);
@@ -99,6 +101,7 @@ export const update = async (info?: UpdateInfo) => {
     currentInfo.lastUpdate = Date.now();
   }
 
+  // change paused state
   if (info.paused !== undefined) {
     currentInfo.paused = info.paused;
   }

@@ -22,14 +22,35 @@ const repeatStateDictionary: Record<string, RepeatState> = {
 };
 
 let server: ReturnType<typeof createServer>;
-let currentMediaInfo: any = {};
+let currInfo: any = {};
 
 const tidalWindow = BrowserWindow.fromId(1);
 
 // Update the media info
-export const updateMediaInfo = (mediaInfo: any) => {
+export const updateMediaInfo = (newInfo: any) => {
   // console.log("recieved media info:", mediaInfo);
-  currentMediaInfo = mediaInfo;
+  if (newInfo.paused !== undefined && currInfo.paused !== undefined) {
+    // pause
+    if (newInfo.paused && !currInfo.paused) {
+      newInfo.offset = Date.now() - currInfo.lastUpdate;
+      newInfo.position = currInfo.lastUpdatedPosition + currInfo.offset / 1000;
+      newInfo.lastUpdatedPosition = currInfo.position;
+    }
+
+    // resume
+    if (!newInfo.paused && currInfo.paused) {
+      newInfo.lastUpdate = Date.now();
+    }
+  }
+
+  currInfo = newInfo;
+
+  // changing tracks or seek
+  if (newInfo.position !== undefined) {
+    //currentMediaInfo.position = mediaInfo.position;
+    currInfo.lastUpdatedPosition = currInfo.position;
+    currInfo.lastUpdate = Date.now();
+  }
 };
 
 function handleControlRequest(url: URL): boolean {
@@ -128,51 +149,34 @@ const createAPIServer = (config: ServerConfig) => {
     if (req.method === "GET") {
       if (req.url === "/now-playing") {
         res.writeHead(200, { "Content-Type": "application/json" });
-        let info = currentMediaInfo;
+        let info = currInfo;
         info.currentTime = Date.now();
         if (!info.paused) {
-          info.lastUpdatedPosition = info.position;
-          info.offset = (info.currentTime - info.lastUpdate) / 1000 + 0.15;
-          info.position = info.position + info.offset;
-          info.serverCurrentTime = info.currentTime;
-          info.serverLastUpdate = info.lastUpdate;
+          info.offset = Date.now() - info.lastUpdate;
+          info.position = info.lastUpdatedPosition + info.offset / 1000;
         }
-        res.end(JSON.stringify(currentMediaInfo));
-        // if lastupdatedposition, set back
-        // todo: wack? lol. need to fix
-        // if (info.lastUpdatedPosition) {
-        //   info.position = info.lastUpdatedPosition;
-        // }
-        return;
-      }
-
-      if (req.url === "/health") {
-        res.writeHead(404, { "Content-Type": "text/plain" });
-        res.end("Not Found");
+        res.end(JSON.stringify(info));
         return;
       }
     } else if (req.method === "PUT") {
       if (req.url === undefined) {
-        res.writeHead(200, { "Content-Type": "text/plain" });
-        res.end("OK");
-        return;
-      }
-      const url = new URL(req.url, `http://${req.headers.host}`);
-      const handled = handleControlRequest(url);
-      if (!handled) {
         res.writeHead(400, { "Content-Type": "text/plain" });
         res.end("Bad Request");
         return;
       }
 
-      res.writeHead(200, { "Content-Type": "text/plain" });
-      res.end("OK");
-      return;
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      const handled = handleControlRequest(url);
+      if (handled) {
+        res.writeHead(200, { "Content-Type": "text/plain" });
+        res.end("OK");
+        return;
+      }
     }
 
     // Handle all other requests
-    res.writeHead(404, { "Content-Type": "text/plain" });
-    res.end("Not Found");
+    res.writeHead(400, { "Content-Type": "text/plain" });
+    res.end("Bad request");
   });
 
   server.listen(config.port, () => {
