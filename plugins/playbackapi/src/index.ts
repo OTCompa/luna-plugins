@@ -68,6 +68,11 @@ const pollForInput = async () => {
       PlayState.seek(input.seek);
       PlayState.play();
     }
+    if (input.volume !== null) {
+      redux.actions["playbackControls/SET_VOLUME"]({
+        volume: Math.max(Math.min(input.volume, 100), 0),
+      });
+    }
   }
 };
 

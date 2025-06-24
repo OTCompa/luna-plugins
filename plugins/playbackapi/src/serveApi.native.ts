@@ -14,6 +14,7 @@ interface ApiInput {
   shuffle: boolean | null;
   repeat: RepeatState | null;
   seek: number | null;
+  volume: number | null;
 }
 
 enum PlaybackControl {
@@ -42,6 +43,7 @@ function ApiInputDefault() {
     shuffle: null,
     repeat: null,
     seek: null,
+    volume: null,
   };
 }
 
@@ -153,7 +155,22 @@ const createAPIServer = (config: ServerConfig) => {
           if (!isNaN(time) && time >= 0) {
             currentApiInput.seek = time;
           } else {
-            currentApiInput.seek = null;
+            res.writeHead(400, { "Content-Type": "text/plain" });
+            res.end("Invalid volume level");
+            return;
+          }
+          break;
+        case "/volume":
+          let reqVolume = url.searchParams.get("level");
+          if (reqVolume) {
+            const volume = parseFloat(reqVolume);
+            if (!isNaN(volume) && volume >= 0 && volume <= 100) {
+              currentApiInput.volume = volume;
+            } else {
+              res.writeHead(400, { "Content-Type": "text/plain" });
+              res.end("Invalid volume level");
+              return;
+            }
           }
           break;
         default:
