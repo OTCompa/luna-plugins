@@ -1,4 +1,5 @@
 import { createServer, IncomingMessage, ServerResponse } from "http";
+import { BrowserWindow } from "electron";
 import { URL } from "url";
 console.log("EPIC STYLE");
 
@@ -6,23 +7,6 @@ interface ServerConfig {
   port: number;
   secure: boolean;
   apiKey?: string;
-}
-
-// nb: I have 0 idea how to call plugin code from native, so I'll just have the plugin ask native
-interface ApiInput {
-  playbackControl: PlaybackControl;
-  shuffle: boolean | null;
-  repeat: RepeatState | null;
-  seek: number | null;
-  volume: number | null;
-}
-
-enum PlaybackControl {
-  None = "None",
-  Play = "Play",
-  Pause = "Pause",
-  Next = "Next",
-  Previous = "Previous",
 }
 
 enum RepeatState {
@@ -37,19 +21,10 @@ const repeatStateDictionary: Record<string, RepeatState> = {
   track: RepeatState.Track,
 };
 
-function ApiInputDefault() {
-  return {
-    playbackControl: PlaybackControl.None,
-    shuffle: null,
-    repeat: null,
-    seek: null,
-    volume: null,
-  };
-}
-
 let server: ReturnType<typeof createServer>;
 let currentMediaInfo: any = {};
-let currentApiInput: ApiInput = ApiInputDefault();
+
+const tidalWindow = BrowserWindow.fromId(1);
 
 // Update the media info
 export const updateMediaInfo = (mediaInfo: any) => {
@@ -57,43 +32,50 @@ export const updateMediaInfo = (mediaInfo: any) => {
   currentMediaInfo = mediaInfo;
 };
 
-export async function checkInput() {
-  let ret = currentApiInput;
-  currentApiInput = ApiInputDefault();
-  return ret;
-}
-
-function handleControlRequest(url: URL, res: ServerResponse): boolean {
+function handleControlRequest(url: URL): boolean {
+  if (tidalWindow === null) {
+    console.log("Unable to find Tidal window");
+    return false;
+  }
+  if (tidalWindow.webContents === null) {
+    console.log("Unable to find Tidal window webContents");
+    return false;
+  }
   switch (url.pathname) {
     case "/play":
-      currentApiInput.playbackControl = PlaybackControl.Play;
+      tidalWindow.webContents.send("playbackapi.play");
       break;
     case "/pause":
-      currentApiInput.playbackControl = PlaybackControl.Pause;
+      tidalWindow.webContents.send("playbackapi.pause");
       break;
     case "/next":
-      currentApiInput.playbackControl = PlaybackControl.Next;
+      tidalWindow.webContents.send("playbackapi.next");
       break;
     case "/prev":
-      currentApiInput.playbackControl = PlaybackControl.Previous;
+      tidalWindow.webContents.send("playbackapi.prev");
       break;
     case "/shuffle":
       let reqShuffle = url.searchParams.get("state");
       if (reqShuffle)
-        currentApiInput.shuffle = reqShuffle.toLowerCase() === "true";
+        tidalWindow.webContents.send(
+          "playbackapi.shuffle",
+          reqShuffle.toLowerCase() === "true"
+        );
       break;
     case "/repeat":
       let reqState = url.searchParams.get("state");
       if (reqState) {
-        currentApiInput.repeat =
-          repeatStateDictionary[reqState.toLowerCase()] ?? null;
+        tidalWindow.webContents.send(
+          "playbackapi.repeat",
+          repeatStateDictionary[reqState.toLowerCase()] ?? null
+        );
       }
       break;
     case "/seek":
       let reqPosition = url.searchParams.get("position");
       let time = parseFloat(reqPosition || "");
       if (!isNaN(time) && time >= 0) {
-        currentApiInput.seek = time;
+        tidalWindow.webContents.send("playbackapi.seek", time);
       } else {
         return false;
       }
@@ -103,7 +85,7 @@ function handleControlRequest(url: URL, res: ServerResponse): boolean {
       if (reqVolume) {
         const volume = parseFloat(reqVolume);
         if (!isNaN(volume) && volume >= 0 && volume <= 100) {
-          currentApiInput.volume = volume;
+          tidalWindow.webContents.send("playbackapi.volume", volume);
         } else {
           return false;
         }
@@ -176,7 +158,7 @@ const createAPIServer = (config: ServerConfig) => {
         return;
       }
       const url = new URL(req.url, `http://${req.headers.host}`);
-      const handled = handleControlRequest(url, res);
+      const handled = handleControlRequest(url);
       if (!handled) {
         res.writeHead(400, { "Content-Type": "text/plain" });
         res.end("Bad Request");

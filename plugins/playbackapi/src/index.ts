@@ -3,12 +3,7 @@ import { redux, MediaItem, PlayState, ipcRenderer } from "@luna/lib";
 
 import { intercept } from "plugins/lib/src/redux";
 import { getCurrentReduxTime } from "./time";
-import {
-  startServer,
-  stopServer,
-  updateMediaInfo,
-  checkInput,
-} from "./serveApi.native";
+import { startServer, stopServer, updateMediaInfo } from "./serveApi.native";
 
 export const unloads = new Set<LunaUnload>();
 
@@ -43,38 +38,28 @@ const getMediaURL = (id?: string, path = "/1280x1280.jpg") =>
     ? "https://resources.tidal.com/images/" + id.split("-").join("/") + path
     : null;
 
-const pollForInput = async () => {
-  let input = await checkInput();
-  if (input) {
-    switch (input.playbackControl) {
-      case "Play":
-        PlayState.play();
-        break;
-      case "Pause":
-        PlayState.pause();
-        break;
-      case "Next":
-        PlayState.next();
-        break;
-      case "Previous":
-        PlayState.previous();
-        break;
-    }
-    if (input.shuffle !== null) PlayState.setShuffle(input.shuffle);
-    if (input.repeat !== null) {
-      PlayState.setRepeatMode(input.repeat);
-    }
-    if (input.seek !== null && input.seek >= 0) {
-      PlayState.seek(input.seek);
-      PlayState.play();
-    }
-    if (input.volume !== null) {
-      redux.actions["playbackControls/SET_VOLUME"]({
-        volume: Math.max(Math.min(input.volume, 100), 0),
-      });
-    }
+ipcRenderer.on(unloads, "playbackapi.play", PlayState.play.bind(PlayState));
+ipcRenderer.on(unloads, "playbackapi.pause", PlayState.pause.bind(PlayState));
+ipcRenderer.on(unloads, "playbackapi.next", PlayState.next.bind(PlayState));
+ipcRenderer.on(unloads, "playbackapi.prev", PlayState.previous.bind(PlayState));
+ipcRenderer.on(unloads, "playbackapi.shuffle", (state) => {
+  PlayState.setShuffle(state);
+});
+ipcRenderer.on(unloads, "playbackapi.repeat", (state) => {
+  PlayState.setRepeatMode(state);
+});
+ipcRenderer.on(unloads, "playbackapi.seek", (position) => {
+  if (position >= 0) {
+    PlayState.seek(position);
+    PlayState.play();
   }
-};
+});
+ipcRenderer.on(unloads, "playbackapi.volume", (level) => {
+  redux.actions["playbackControls/SET_MUTE"](level === 0);
+  redux.actions["playbackControls/SET_VOLUME"]({
+    volume: level,
+  });
+});
 
 export const update = async (info?: UpdateInfo) => {
   if (!info) {
@@ -147,13 +132,6 @@ export const update = async (info?: UpdateInfo) => {
   };
   printPlayTime();
 })();
-
-const poll = async () => {
-  pollForInput();
-  let t = setTimeout(poll, 200);
-  unloads.add(() => clearTimeout(t));
-};
-poll();
 
 MediaItem.onMediaTransition(unloads, async (mediaItem) => {
   console.log("Media transitioned to " + (await mediaItem.title()));
