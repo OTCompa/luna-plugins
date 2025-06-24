@@ -1,5 +1,5 @@
 {
-  "name": "@espeon/luna-plugins",
+  "name": "@OTCompa/luna-plugins",
   "description": "Plugins for Luna (Tidal mod client)",
   "type": "module",
   "scripts": {
