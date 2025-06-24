@@ -26,6 +26,8 @@ interface MediaInfo {
   /// is the player paused
   paused: boolean;
   lastUpdate: number;
+  shuffle: boolean;
+  repeat: number;
 }
 
 interface UpdateInfo {
@@ -58,11 +60,9 @@ const pollForInput = async () => {
         PlayState.previous();
         break;
     }
-    if (input.shuffle) PlayState.setShuffle(!PlayState.shuffle);
-    if (input.repeat) {
-      let next = PlayState.repeat + 1;
-      if (next > 2) next = 0;
-      PlayState.setRepeat(next);
+    if (input.shuffle !== null) PlayState.setShuffle(input.shuffle);
+    if (input.repeat !== null) {
+      PlayState.setRepeatMode(input.repeat);
     }
     if (input.seek !== null && input.seek >= 0) {
       PlayState.seek(input.seek);
@@ -85,6 +85,8 @@ export const update = async (info?: UpdateInfo) => {
       artistArt: null,
       paused: false,
       lastUpdate: Date.now(),
+      shuffle: PlayState.shuffle,
+      repeat: PlayState.repeatMode,
     };
   }
 

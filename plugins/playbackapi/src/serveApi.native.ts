@@ -11,8 +11,8 @@ interface ServerConfig {
 // nb: I have 0 idea how to call plugin code from native, so I'll just have the plugin ask native
 interface ApiInput {
   playbackControl: PlaybackControl;
-  shuffle: boolean;
-  repeat: boolean;
+  shuffle: boolean | null;
+  repeat: RepeatState | null;
   seek: number | null;
 }
 
@@ -24,11 +24,23 @@ enum PlaybackControl {
   Previous = "Previous",
 }
 
+enum RepeatState {
+  Off = 0,
+  Context = 1,
+  Track = 2,
+}
+
+const repeatStateDictionary: Record<string, RepeatState> = {
+  off: RepeatState.Off,
+  context: RepeatState.Context,
+  track: RepeatState.Track,
+};
+
 function ApiInputDefault() {
   return {
     playbackControl: PlaybackControl.None,
-    shuffle: false,
-    repeat: false,
+    shuffle: null,
+    repeat: null,
     seek: null,
   };
 }
@@ -124,10 +136,16 @@ const createAPIServer = (config: ServerConfig) => {
           currentApiInput.playbackControl = PlaybackControl.Previous;
           break;
         case "/shuffle":
-          currentApiInput.shuffle = true;
+          let reqShuffle = url.searchParams.get("state");
+          if (reqShuffle)
+            currentApiInput.shuffle = reqShuffle.toLowerCase() === "true";
           break;
         case "/repeat":
-          currentApiInput.repeat = true;
+          let reqState = url.searchParams.get("state");
+          if (reqState) {
+            currentApiInput.repeat =
+              repeatStateDictionary[reqState.toLowerCase()] ?? null;
+          }
           break;
         case "/seek":
           let reqPosition = url.searchParams.get("position");
