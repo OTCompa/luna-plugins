@@ -99,7 +99,7 @@ export const update = async (info?: UpdateInfo) => {
       track.artist && track.artist.picture
         ? getMediaURL(track.artist.picture, "/320x320.jpg")
         : null;
-
+    currentInfo.position = 0;
     currentInfo.duration = track.duration;
   }
 
