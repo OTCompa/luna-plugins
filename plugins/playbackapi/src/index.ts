@@ -33,6 +33,7 @@ interface UpdateInfo {
 }
 
 let currentInfo: MediaInfo | null = null;
+let server: ReturnType<typeof startServer> | null = null;
 
 const getMediaURL = (id?: string, path = "/1280x1280.jpg") =>
   id
@@ -159,7 +160,6 @@ console.log(MediaItem);
 
 export const onLoad = () => {
   console.log("Loading PlaybackAPI on port " + 3665);
-  console.log("Secure mode " + "disabled.");
   try {
     server = startServer({
       port: 3665,
@@ -171,6 +171,14 @@ export const onLoad = () => {
     unloads.add(() => {
       stopServer();
     });
+
+    try {
+      let ws: WebSocket;
+      ws = new WebSocket("ws://localhost:3666");
+      console.log("Notified client of PlaybackAPI start");
+    } catch {
+      // don't really care if this fails, only used to notify the client that server is up
+    }
 
     // finally, init the media info store
     const initStore = async () => {
