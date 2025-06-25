@@ -6,6 +6,8 @@ import { getCurrentReduxTime } from "./time";
 import { startServer, stopServer, updateMediaInfo } from "./serveApi.native";
 import { settings } from "./Settings";
 
+export { Settings } from "./Settings";
+
 export const unloads = new Set<LunaUnload>();
 
 interface MediaInfo {
