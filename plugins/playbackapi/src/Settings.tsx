@@ -12,24 +12,24 @@ import {
 export const settings = await ReactiveStore.getPluginStorage("playbackapi", {
   apiHost: "127.0.0.1",
   apiPort: 3665,
-  notifyClient: true,
+  notifyClient: false,
   clientHost: "127.0.0.1",
   clientPort: 3666,
 });
 
 export const Settings = () => {
-  const [apiHost, setApiHost] = React.useState(storage.apiHost);
-  const [apiPort, setApiPort] = React.useState(storage.apiPort);
-  const [notifyClient, setNotifyClient] = React.useState(storage.notifyClient);
-  const [clientHost, setClientHost] = React.useState(storage.clientHost);
-  const [clientPort, setClientPort] = React.useState(storage.clientPort);
+  const [apiHost, setApiHost] = React.useState(settings.apiHost);
+  const [apiPort, setApiPort] = React.useState(settings.apiPort);
+  const [notifyClient, setNotifyClient] = React.useState(settings.notifyClient);
+  const [clientHost, setClientHost] = React.useState(settings.clientHost);
+  const [clientPort, setClientPort] = React.useState(settings.clientPort);
   return (
     <LunaSettings>
       <LunaTextSetting
         title="API Host"
         desc="Host to broadcast to"
         value={apiHost}
-        onChange={(host: string) => setApiHost((storage.apiHost = host))}
+        onChange={(host: string) => setApiHost((settings.apiHost = host))}
       />
       <LunaNumberSetting
         title="API Port"
@@ -37,21 +37,21 @@ export const Settings = () => {
         value={apiPort}
         min={1}
         max={65535}
-        onNumber={(num: number) => setApiPort((storage.apiPort = num))}
+        onNumber={(num: number) => setApiPort((settings.apiPort = num))}
       />
       <LunaSwitchSetting
         title="Notify Client"
         desc="Whether to notify the client of server life on load"
         checked={notifyClient}
         onChange={(value: boolean) =>
-          setNotifyClient((storage.notifyClient = value))
+          setNotifyClient((settings.notifyClient = value))
         }
       />
       <LunaTextSetting
         title="Client Host"
         desc="Desired websocket host to notify of load"
         value={clientHost}
-        onChange={(host: string) => setClientHost((storage.apiHost = host))}
+        onChange={(host: string) => setClientHost((settings.apiHost = host))}
       />
       <LunaNumberSetting
         title="Client Port"
@@ -59,7 +59,7 @@ export const Settings = () => {
         value={clientPort}
         min={1}
         max={65535}
-        onNumber={(num: number) => setClientPort((storage.clientPort = num))}
+        onNumber={(num: number) => setClientPort((settings.clientPort = num))}
       />
     </LunaSettings>
   );
