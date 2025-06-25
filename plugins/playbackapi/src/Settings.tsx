@@ -12,7 +12,7 @@ import {
 export const settings = await ReactiveStore.getPluginStorage("playbackapi", {
   apiHost: "127.0.0.1",
   apiPort: 3665,
-  notifyClient: false,
+  notifyClient: true,
   clientHost: "127.0.0.1",
   clientPort: 3666,
 });
@@ -49,13 +49,13 @@ export const Settings = () => {
       />
       <LunaTextSetting
         title="Client Host"
-        desc="Desired websocket host to notify of load"
+        desc="Desired host to notify of PlaybackAPI load"
         value={clientHost}
         onChange={(host: string) => setClientHost((settings.apiHost = host))}
       />
       <LunaNumberSetting
         title="Client Port"
-        desc="Desired websocket port to notify of load"
+        desc="Desired port to notify of PlaybackAPI load"
         value={clientPort}
         min={1}
         max={65535}

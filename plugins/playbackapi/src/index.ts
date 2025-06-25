@@ -159,7 +159,7 @@ PlayState.onState(unloads, (state) => {
 });
 console.log(MediaItem);
 
-export const onLoad = () => {
+export const onLoad = async () => {
   console.log("Loading PlaybackAPI on port " + settings.apiPort);
   try {
     server = startServer({
@@ -175,7 +175,7 @@ export const onLoad = () => {
 
     if (settings.notifyClient) {
       try {
-        new WebSocket(`ws://${settings.clientHost}:${settings.clientPort}`);
+        await fetch(`http://${settings.clientHost}:${settings.clientPort}/`);
         console.log("Notified client of PlaybackAPI start");
       } catch {
         // don't really care if this fails, only used to notify the client that server is up
