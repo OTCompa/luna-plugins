@@ -4,6 +4,7 @@ import { redux, MediaItem, PlayState, ipcRenderer } from "@luna/lib";
 import { intercept } from "plugins/lib/src/redux";
 import { getCurrentReduxTime } from "./time";
 import { startServer, stopServer, updateMediaInfo } from "./serveApi.native";
+import { settings } from "./Settings";
 
 export const unloads = new Set<LunaUnload>();
 
@@ -159,10 +160,10 @@ PlayState.onState(unloads, (state) => {
 console.log(MediaItem);
 
 export const onLoad = () => {
-  console.log("Loading PlaybackAPI on port " + 3665);
+  console.log("Loading PlaybackAPI on port " + settings.apiPort);
   try {
     server = startServer({
-      port: 3665,
+      port: settings.apiPort,
       secure: false,
       apiKey: undefined,
     });
@@ -172,14 +173,14 @@ export const onLoad = () => {
       stopServer();
     });
 
-    try {
-      let ws: WebSocket;
-      ws = new WebSocket("ws://localhost:3666");
-      console.log("Notified client of PlaybackAPI start");
-    } catch {
-      // don't really care if this fails, only used to notify the client that server is up
+    if (settings.notifyClient) {
+      try {
+        new WebSocket(`ws://${settings.clientHost}:${settings.clientPort}`);
+        console.log("Notified client of PlaybackAPI start");
+      } catch {
+        // don't really care if this fails, only used to notify the client that server is up
+      }
     }
-
     // finally, init the media info store
     const initStore = async () => {
       const item = await MediaItem.fromPlaybackContext();
