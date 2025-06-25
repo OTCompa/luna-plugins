@@ -23,7 +23,7 @@ const repeatStateDictionary: Record<string, RepeatState> = {
 
 let server: ReturnType<typeof createServer>;
 let currInfo: any = {};
-
+let tries = 0;
 const tidalWindow = BrowserWindow.fromId(1);
 
 // Update the media info
@@ -177,6 +177,23 @@ const createAPIServer = (config: ServerConfig) => {
     // Handle all other requests
     res.writeHead(400, { "Content-Type": "text/plain" });
     res.end("Bad request");
+  });
+
+  server.on("error", (e: NodeJS.ErrnoException) => {
+    if (tries >= 5) {
+      console.error("Failed to start server after multiple attempts.");
+      return;
+    }
+    if (e.code === "EADDRINUSE") {
+      console.error("Address in use, retrying...");
+    } else {
+      console.error("Server error:", e);
+    }
+    tries++;
+    setTimeout(() => {
+      server.close();
+      server.listen(config.port);
+    }, 1000);
   });
 
   server.listen(config.port, () => {
